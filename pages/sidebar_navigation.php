@@ -97,7 +97,6 @@ function openMenuGranted(page) {
 		$('#contents').html(data);
 		psaSpinnerOff();
 	});
-	
 }
 
 $(function() {

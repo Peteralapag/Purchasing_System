@@ -1,40 +1,16 @@
 <!-- Dashboard Notifications -->
-<div class="row">
+<div class="row g-3">
 
-    <!-- Approved POs -->
-    <div class="col-md-4 mb-3">
-        <div class="card text-white bg-primary">
+    <!-- Pending PO Emails -->
+    <div class="col-md-4">
+        <div class="card shadow-sm hover-shadow cursor-pointer" id="pending-emails-card">
             <div class="card-body d-flex align-items-center">
-                <i class="fas fa-file-invoice fa-3x me-3"></i>
-                <div>
-                    <h5 class="card-title">Approved POs</h5>
-                    <h3 id="po-count">0</h3>
+                <div class="icon-wrapper me-3">
+                    <i class="fas fa-envelope fa-3x text-danger"></i>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Approved PRs -->
-    <div class="col-md-4 mb-3">
-        <div class="card text-white bg-success">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-clipboard-list fa-3x me-3"></i>
                 <div>
-                    <h5 class="card-title">Approved PRs</h5>
-                    <h3 id="pr-count">0</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Approved Canvassing -->
-    <div class="col-md-4 mb-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-shopping-cart fa-3x me-3"></i>
-                <div>
-                    <h5 class="card-title">Approved Canvassing</h5>
-                    <h3 id="pc-count">0</h3>
+                    <h6 class="text-uppercase text-muted mb-1">Pending PO Emails</h6>
+                    <h2 id="pending-emails-count" class="fw-bold mb-0">0</h2>
                 </div>
             </div>
         </div>
@@ -42,20 +18,39 @@
 
 </div>
 
+<style>
+/* Card hover effect */
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,0.15);
+}
+.cursor-pointer {
+    cursor: pointer;
+}
+.icon-wrapper i {
+    transition: transform 0.3s ease;
+}
+.hover-shadow:hover .icon-wrapper i {
+    transform: rotate(15deg) scale(1.1);
+}
+</style>
 
 <script>
+document.getElementById('pending-emails-card').addEventListener('click', () => {
+    $.post("./Modules/Purchasing_System/includes/pending_po_emails.php", {}, function(data) {
+        $('#contents').html(data);
+    });
+});
 
 function fetchDashboardCounts() {
     fetch('./Modules/Purchasing_System/actions/dashboard_notify.php')
         .then(res => res.json())
         .then(data => {
-            const po = document.getElementById('po-count');
-            const pr = document.getElementById('pr-count');
-            const pc = document.getElementById('pc-count');
-
-            if (po) po.innerText = data.po ?? 0;
-            if (pr) pr.innerText = data.pr ?? 0;
-            if (pc) pc.innerText = data.pc ?? 0;
+            const pendingEmails = document.getElementById('pending-emails-count');
+            if (pendingEmails) pendingEmails.innerText = data.pending_emails ?? 0;
         })
         .catch(err => console.error('Error fetching dashboard counts:', err));
 }
@@ -65,6 +60,4 @@ fetchDashboardCounts();
 
 // Auto-refresh every 1 min
 setInterval(fetchDashboardCounts, 60000);
-
-
 </script>
