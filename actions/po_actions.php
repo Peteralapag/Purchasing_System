@@ -1,6 +1,13 @@
 <?php
-include '../../../init.php';
+include_once '../../../init.php';
 $db = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+
+require_once $_SERVER['DOCUMENT_ROOT']. "/Plugins/PSAMailer/src/PHPMailer.php";
+require_once $_SERVER['DOCUMENT_ROOT']. "/Plugins/PSAMailer/src/SMTP.php";
+require_once $_SERVER['DOCUMENT_ROOT']. "/Plugins/PSAMailer/src/Exception.php";
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $mode     = $_POST['mode'] ?? '';
 $ponumber = $_POST['ponumber'] ?? '';
@@ -15,7 +22,7 @@ if (empty($user)) {
 }
 
 /* ===== CHECK PO STATUS ===== */
-$stmt = $db->prepare("SELECT status FROM purchase_orders WHERE po_number = ? LIMIT 1");
+$stmt = $db->prepare("SELECT id, po_number, pr_number, status, supplier_id FROM purchase_orders WHERE po_number = ? LIMIT 1");
 $stmt->bind_param("s", $ponumber);
 $stmt->execute();
 $po = $stmt->get_result()->fetch_assoc();
@@ -24,6 +31,96 @@ $stmt->close();
 if (!$po) {
     exit('PO not found');
 }
+
+/* ===== APPROVE PO ===== */
+if ($mode === 'approvepo') {
+
+    if ($po['status'] === 'APPROVED') {
+        exit('PO already approved');
+    }
+
+    if ($po['status'] === 'CANCELLED') {
+        exit('Cannot approve cancelled PO');
+    }
+
+    // UPDATE PO status
+    $stmt = $db->prepare("
+        UPDATE purchase_orders
+        SET 
+            status = 'APPROVED',
+            approved_by = ?,
+            approved_date = NOW(),
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE po_number = ?
+    ");
+    $stmt->bind_param("sss", $user, $user, $ponumber);
+
+    if ($stmt->execute()) {
+        echo "PO approved successfully<br>";
+
+        // ==========================
+        // FETCH SUPPLIER
+        // ==========================
+        if (!empty($po['supplier_id'])) {
+            $supplier_id = (int) $po['supplier_id'];
+            $stmt2 = $db->prepare("SELECT id, name, email FROM suppliers WHERE id = ?");
+            $stmt2->bind_param("i", $supplier_id);
+            $stmt2->execute();
+            $supplier = $stmt2->get_result()->fetch_assoc();
+            $stmt2->close();
+
+            if ($supplier && !empty($supplier['email'])) {
+                try {
+                    // PHPMailer
+                    $mail = new PHPMailer(true);
+                    $mail->isSMTP();
+                    $mail->Host       = 'smtp.dreamhost.com';
+                    $mail->SMTPAuth   = true;
+                    $mail->Username   = 'purchasing-test@rosebakeshop.co';
+                    $mail->Password   = 'Testonly@1g4';
+                    $mail->SMTPSecure = 'tls';
+                    $mail->Port       = 587;
+
+                    $mail->setFrom('purchasing-test@rosebakeshop.co', 'Jathnier Corp. Purchaser');
+                    $mail->addAddress($supplier['email'], $supplier['name']);
+
+                    $mail->isHTML(true);
+                    $mail->Subject = "Purchase Order #".$po['po_number'];
+
+                    // ===== LAST WORKING EMAIL FORMAT =====
+                    $body = "
+                        Dear {$supplier['name']},<br><br>
+                        You have been selected as the supplier for PO #{$po['po_number']}.<br><br>
+                        Please check your order and prepare for delivery.
+                    ";
+                    $mail->Body = $body;
+
+                    $mail->send();
+                    echo "DEBUG: Email sent successfully.<br>";
+
+                } catch (Exception $e) {
+                    echo "DEBUG: Email failed: ".$mail->ErrorInfo."<br>";
+                }
+            } else {
+                echo "DEBUG: Supplier email missing.<br>";
+            }
+        }
+
+    } else {
+        exit("Failed to approve PO: ".$stmt->error);
+    }
+
+    $stmt->close();
+    $db->close();
+    exit;
+}
+
+/* ===== REVIEW, CLOSE, VOID PO LOGIC ===== */
+/* Keep the rest of your original logic for reviewpo, closepo, voidpo here without touching */
+
+
+
 
 
 /* ===== REVIEW PO ===== */
@@ -109,41 +206,7 @@ if ($mode === 'closepo') {
 }
 
 
-/* ===== APPROVE PO ===== */
-if ($mode === 'approvepo') {
-
-    if ($po['status'] === 'APPROVED') {
-        exit('PO already approved');
-    }
-
-    if ($po['status'] === 'CANCELLED') {
-        exit('Cannot approve cancelled PO');
-    }
-
-    $stmt = $db->prepare("
-        UPDATE purchase_orders
-        SET 
-            status = 'APPROVED',
-            approved_by = ?,
-            approved_date = NOW(),
-            updated_at = NOW(),
-            updated_by = ?
-        WHERE po_number = ?
-    ");
-    $stmt->bind_param("sss", $user, $user, $ponumber);
-
-    if ($stmt->execute()) {
-        echo 'PO approved successfully';
-    } else {
-        echo 'Failed to approve PO';
-    }
-
-    $stmt->close();
-    $db->close();
-    exit;
-}
-
-
+/* ===== VOID PO ===== */
 
 if ($mode === 'voidpo') {
 

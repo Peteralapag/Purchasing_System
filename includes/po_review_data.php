@@ -22,28 +22,39 @@ $sql = "
 $params = [];
 $types  = "";
 
+/* FILTERS */
 if ($status !== '') {
-    $sql .= " AND po.status = ? ORDER BY po.id DESC LIMIT ?";
-    $params = [$status, $limit];
-    $types = "si";
+    $sql .= " AND po.status = ?";
+    $params[] = $status;
+    $types   .= "s";
 } else {
-    $sql .= " AND po.reviewed_by IS NULL ORDER BY po.id DESC LIMIT ?";
-    $params = [$limit];
-    $types = "i";
+    $sql .= "
+        AND po.prepared_by IS NOT NULL
+        AND po.prepared_date IS NOT NULL
+        AND po.reviewed_by IS NULL
+        AND po.reviewed_date IS NULL
+        AND po.approved_by IS NULL
+        AND po.approved_date IS NULL
+        AND po.status = 'PENDING'
+    ";
 }
+
+/* ORDER & LIMIT */
+$sql .= " ORDER BY po.id DESC LIMIT ?";
+$params[] = $limit;
+$types   .= "i";
 
 $stmt = $db->prepare($sql);
 $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
 
-
 $pos = [];
 while ($row = $result->fetch_assoc()) {
     $pos[] = $row;
 }
-$stmt->close();
 
+$stmt->close();
 
 
 $i = 0;
