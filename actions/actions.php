@@ -97,73 +97,72 @@ if ($mode == 'returntopr') {
 }
 
 
-
 if ($mode == 'savecanvassing') {
 
-	$pr_no = $_POST['prnumber'] ?? '';
-	$user = $_SESSION['purch_appnameuser']?? '';
+    $pr_no = $_POST['prnumber'] ?? '';
 
-	if(!$pr_no){
-	    echo json_encode(['status'=>'error','message'=>'Invalid PR']);
-	    exit;
-	}
-	
-	// check if already pushed
-	$chk = $db->query("SELECT id, status FROM purchase_request WHERE pr_number='$pr_no'");
-	$row = $chk->fetch_assoc();
-	
-	$status = $row['status'];
-	$rowid = $row['id'];
-	
-	if($status === 'for_canvassing' || $status === 'for_canvassing_approved' || $status === 'for_canvassing_rejected' || $status === 'converted' || $status === 'converted_rejected'){
-	    echo json_encode(['status'=>'error','message'=>'Already in Canvassing']);
-	    exit;
-	}
-	
-	$db->begin_transaction();
-	
-	try{
-	
-	    // generate canvass no
-	    $canvass_no = 'CV-' . date('Ymd-His');
-	
-	    // insert canvassing head
-	    $db->query("
-	        INSERT INTO purchase_canvassing 
-	        (canvass_no, pr_no, requested_by, status, source, remarks, created_at)
-	        SELECT '$canvass_no', pr_number, '$user', 'OPEN', source, remarks, NOW()
-	        FROM purchase_request
-	        WHERE id='$rowid'
-	    ");
-	
-	    // insert items
-	    $db->query("
-	        INSERT INTO purchase_canvassing_items
-	        (canvass_no,item_code,item_description,quantity,unit,estimated_cost)
-	        SELECT '$canvass_no', item_code, item_description, quantity, unit, estimated_cost
-	        FROM purchase_request_items
-	        WHERE pr_id='$rowid' 
-	    ");
-	
-	    // update PR status
-	    $db->query("
-	        UPDATE purchase_request
-	        SET status='for_canvassing'
-	        WHERE id='$rowid'
-	    ");
-	
-	    $db->commit();
-	
-	    echo json_encode(['status'=>'success']);
-	
-	}catch(Exception $e){
-	    $db->rollback();
-	    echo json_encode(['status'=>'error','message'=>$e->getMessage()]);
-	}
-
-
+    if(!$pr_no){
+        echo json_encode(['status'=>'error','message'=>'Invalid PR']);
+        exit;
+    }
+    
+    // check if already pushed
+    $chk = $db->query("SELECT id, status FROM purchase_request WHERE pr_number='$pr_no'");
+    $row = $chk->fetch_assoc();
+    
+    $status = $row['status'];
+    $rowid = $row['id'];
+    
+    if(in_array($status, ['for_canvassing','for_canvassing_approved','for_canvassing_rejected','converted','converted_rejected'])){
+        echo json_encode(['status'=>'error','message'=>'Already in Canvassing']);
+        exit;
+    }
+    
+    $db->begin_transaction();
+    
+    try{
+    
+        // generate canvass no
+        $canvass_no = 'CV-' . date('Ymd-His');
+    
+        // insert canvassing head with requested_by from PR
+        $db->query("
+            INSERT INTO purchase_canvassing 
+            (canvass_no, pr_no, requested_by, status, source, remarks, created_at)
+            SELECT '$canvass_no', pr_number, requested_by, 'OPEN', source, remarks, NOW()
+            FROM purchase_request
+            WHERE id='$rowid'
+        ");
+    
+        // insert items from PR
+        $db->query("
+            INSERT INTO purchase_canvassing_items
+            (canvass_no, item_code, item_description, quantity, unit, estimated_cost)
+            SELECT '$canvass_no', item_code, item_description, quantity, unit, estimated_cost
+            FROM purchase_request_items
+            WHERE pr_id='$rowid' 
+        ");
+    
+        // update PR status
+        $db->query("
+            UPDATE purchase_request
+            SET status='for_canvassing'
+            WHERE id='$rowid'
+        ");
+    
+        $db->commit();
+    
+        echo json_encode(['status'=>'success']);
+    
+    }catch(Exception $e){
+        $db->rollback();
+        echo json_encode(['status'=>'error','message'=>$e->getMessage()]);
+    }
 
 }
+
+
+
 
 if ($mode == 'editpo') {
 
