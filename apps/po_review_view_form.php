@@ -137,11 +137,16 @@ $userpreveledgeapprover = checkPolicy($username, $applications, $module, 'p_revi
 	
 	
     <!-- HEADER -->
-    <div class="po-header">
+    <div class="po-header" style="align-items:flex-start;">
         <div>
+            <!-- LOGO -->
+            <img src="../../../Images/jathnier_logo.png" 
+                style="height:40px; margin-bottom:5px;" 
+                alt="Company Logo"><br>
             <strong>Jathnier Corporation</strong><br>
             Ruby St., RGA Village, Dacudao Avenue,<br>
             Davao City, Philippines
+
         </div>
         <h3>Purchase Order</h3>
     </div>
