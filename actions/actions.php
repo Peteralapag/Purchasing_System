@@ -431,6 +431,9 @@ if($mode === 'editsupplier'){
     $bank_name           = $_POST['bank_name'] ?? '';
     $bank_account_number = $_POST['bank_account_number'] ?? '';
 
+	$vat_rate = (float)($_POST['vat_rate'] ?? 0);
+	$withholding_rate = (float)($_POST['withholding_rate'] ?? 0);
+
     if(!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)){
         echo 'Invalid email address';
         exit;
@@ -463,6 +466,8 @@ if($mode === 'editsupplier'){
             status=?,
             gl_account_code=?,
             tax_type=?,
+			vat_rate=?,
+    		withholding_rate=?,
             payment_method=?,
             bank_name=?,
             bank_account_number=?,
@@ -472,7 +477,7 @@ if($mode === 'editsupplier'){
     ");
 
     $stmt->bind_param(
-        "ssssssssisssssssi",
+        "ssssssssissddsssssi",
         $supplier_code,
         $name,
         $address,
@@ -484,6 +489,8 @@ if($mode === 'editsupplier'){
         $status,
         $gl_account_code,
         $tax_type,
+        $vat_rate,
+        $withholding_rate,
         $payment_method,
         $bank_name,
         $bank_account_number,

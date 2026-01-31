@@ -234,6 +234,7 @@ $userpreveledgeapprover = checkPolicy($username, $applications, 'Purchase Canvas
     <table width="100%" style="margin-top:40px">
         <tr>
 
+            <td><b>REQUESTED BY:</b><br><br><?= htmlspecialchars($header['requested_by']) ?></td>
             <td><b>PREPARED BY:</b><br><br><?= htmlspecialchars($header['prepared_by']) ?></td>
             <td><b>REVIEWED BY:</b><br><br><?= htmlspecialchars($header['reviewed_by']) ?></td>
 
